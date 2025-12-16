@@ -48,7 +48,7 @@ void insertData(sqlite3 *db,
 // ======================================
 // リワード表示（今回分の金額）
 // ======================================
-void showReward(sqlite3* db, int totalcost)
+void showReward(sqlite3* db, int totalcost,bool flg)
 {
     sqlite3_stmt* stmt;
     string sql =
@@ -65,16 +65,28 @@ void showReward(sqlite3* db, int totalcost)
 
     sqlite3_bind_int(stmt, 1, totalcost);
 
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
+    if (sqlite3_step(stmt) == SQLITE_ROW) 
+    {
         int amount = sqlite3_column_int(stmt, 0);
         const char* description =
             reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
-
+        if(flg)
+        {
+        cout << "\n=== 累計の金額でできること ===\n";
+        cout << "累計" << totalcost << "円 → "
+             << amount << "円相当："
+             << description << endl;
+        } 
+        else 
+        {
         cout << "\n=== 今回の金額でできること ===\n";
         cout << "今回 " << totalcost << "円 → "
              << amount << "円相当："
              << description << endl;
-    } else {
+        }
+    } 
+    else 
+    {
         cout << "\n今回の金額では該当するリワードがありません。\n";
     }
 
@@ -172,10 +184,29 @@ int main()
                months,
                totalcost);
 
+    cout << "\n=== 現在の登録データ ===\n";
+    sql = "SELECT * FROM smoking;";
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) 
+    == SQLITE_OK) { 
+        while (sqlite3_step(stmt) == SQLITE_ROW) { 
+            cout << "ID: " << sqlite3_column_int(stmt, 0) 
+            << ", Brand: " << sqlite3_column_text(stmt, 1) 
+            << ", TotalCost: " << sqlite3_column_int(stmt, 6) 
+            << endl;
+        }
+        int sumTotal = 0;
+        sql = "SELECT SUM(total_cost) FROM smoking;";
+        if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
+            if (sqlite3_step(stmt) == SQLITE_ROW) {
+                sumTotal = sqlite3_column_int(stmt, 0);
+            }
+        } sqlite3_finalize(stmt);
+        showReward(db, sumTotal,true);
+    }
     // ----------------------------------
     // 今回分のリワード表示
     // ----------------------------------
-    showReward(db, totalcost);
+    showReward(db, totalcost,false);
 
     sqlite3_close(db);
     return 0;
